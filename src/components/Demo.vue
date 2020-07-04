@@ -75,7 +75,7 @@ export default {
     const authorizationToken = ref(null);
     const listening = ref(false);
     const subscriptionKeyDisabled = ref(false);
-    let SDK = null;
+    let SDK;
 
     const getAuthToken = () => {
       const authorizationEndpoint =
