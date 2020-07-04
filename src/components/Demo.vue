@@ -1,12 +1,5 @@
 <template>
-  <div id="warning">
-    <h1 style="font-weight: 500;">
-      Speech Recognition Speech SDK not found
-      (microsoft.cognitiveservices.speech.sdk.bundle.js missing).
-    </h1>
-  </div>
-
-  <div id="content" style="display: none;">
+  <div>
     <table width="100%">
       <tr>
         <td></td>
@@ -26,10 +19,11 @@
         </td>
         <td>
           <input
-            id="subscriptionKey"
+            :disabled="subscriptionKeyDisabled"
+            v-model="subscriptionKey"
+            placeholder="subscriptionKey"
             type="text"
             size="40"
-            value="subscription"
           />
         </td>
       </tr>
@@ -37,24 +31,30 @@
         <td align="right">Region</td>
         <td>
           <input
-            id="serviceRegion"
+            v-model="serviceRegion"
+            placeholder="serviceRegion"
             type="text"
             size="40"
-            value="YourServiceRegion"
           />
         </td>
       </tr>
       <tr>
         <td></td>
         <td>
-          <button id="startRecognizeOnceAsyncButton">Start recognition</button>
+          <button
+            id="startRecognizeOnceAsyncButton"
+            @click="startListening"
+            :disabled="listening"
+          >
+            Start listening
+          </button>
         </td>
       </tr>
       <tr>
         <td align="right" valign="top">Results</td>
         <td>
           <textarea
-            id="phraseDiv"
+            v-model="phrase"
             style="display: inline-block; width: 500px; height: 200px;"
           ></textarea>
         </td>
@@ -64,121 +64,97 @@
 </template>
 
 <script>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 
 export default {
   name: 'Demo',
   setup() {
-    onMounted(() => {
-      // AUTH
-      // Note: Replace the URL with a valid endpoint to retrieve
-      //       authorization tokens for your subscription.
-      var authorizationEndpoint =
+    const phrase = ref('');
+    const subscriptionKey = ref('');
+    const serviceRegion = ref('westeurope');
+    const authorizationToken = ref(null);
+    const listening = ref(false);
+    const subscriptionKeyDisabled = ref(false);
+    let SDK = null;
+
+    const getAuthToken = () => {
+      const authorizationEndpoint =
         'https://westeurope.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
+      const a = new XMLHttpRequest();
+      a.open('GET', authorizationEndpoint);
+      a.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      a.send('');
+      a.onload = function () {
+        const token = JSON.parse(atob(this.responseText.split('.')[1]));
+        serviceRegion.value = token.region;
+        authorizationToken.value = this.responseText;
+        subscriptionKeyDisabled = true;
+        subscriptionKey.value = 'using authorization token (hit F5 to refresh)';
+        console.log('Got an authorization token: ' + token);
+      };
+    };
 
-      function RequestAuthorizationToken() {
-        if (authorizationEndpoint) {
-          var a = new XMLHttpRequest();
-          a.open('GET', authorizationEndpoint);
-          a.setRequestHeader(
-            'Content-Type',
-            'application/x-www-form-urlencoded'
-          );
-          a.send('');
-          a.onload = function () {
-            var token = JSON.parse(atob(this.responseText.split('.')[1]));
-            serviceRegion.value = token.region;
-            authorizationToken = this.responseText;
-            subscriptionKey.disabled = true;
-            subscriptionKey.value =
-              'using authorization token (hit F5 to refresh)';
-            console.log('Got an authorization token: ' + token);
-          };
-        }
-      }
+    const startListening = () => {
+      listening.value = true;
+      phrase.value = '';
 
-      // QUICKSTART CODE
-      // status fields and start button in UI
-      var phraseDiv;
-      var startRecognizeOnceAsyncButton;
-
-      // subscription key and region for speech services.
-      var subscriptionKey, serviceRegion;
-      var authorizationToken;
-      var SpeechSDK;
-      var recognizer;
-
-      startRecognizeOnceAsyncButton = document.getElementById(
-        'startRecognizeOnceAsyncButton'
-      );
-      subscriptionKey = document.getElementById('subscriptionKey');
-      serviceRegion = document.getElementById('serviceRegion');
-      phraseDiv = document.getElementById('phraseDiv');
-
-      startRecognizeOnceAsyncButton.addEventListener('click', function () {
-        startRecognizeOnceAsyncButton.disabled = true;
-        phraseDiv.innerHTML = '';
-
-        // if we got an authorization token, use the token. Otherwise use the provided subscription key
-        var speechConfig;
-        if (authorizationToken) {
-          speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(
-            authorizationToken,
-            serviceRegion.value
-          );
-        } else {
-          if (
-            subscriptionKey.value === '' ||
-            subscriptionKey.value === 'subscription'
-          ) {
-            alert(
-              'Please enter your Microsoft Cognitive Services Speech subscription key!'
-            );
-            return;
-          }
-          speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-            subscriptionKey.value,
-            serviceRegion.value
-          );
-        }
-
-        speechConfig.speechRecognitionLanguage = 'en-US';
-        var audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-        recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
-
-        recognizer.recognizeOnceAsync(
-          function (result) {
-            startRecognizeOnceAsyncButton.disabled = false;
-            phraseDiv.innerHTML += result.text;
-            window.console.log(result);
-
-            recognizer.close();
-            recognizer = undefined;
-          },
-          function (err) {
-            startRecognizeOnceAsyncButton.disabled = false;
-            phraseDiv.innerHTML += err;
-            window.console.log(err);
-
-            recognizer.close();
-            recognizer = undefined;
-          }
+      // if we got an authorization token, use the token. Otherwise use the provided subscription key
+      let speechConfig;
+      if (authorizationToken.value) {
+        speechConfig = SDK.SpeechConfig.fromAuthorizationToken(
+          authorizationToken.value,
+          serviceRegion.value
         );
-      });
-
-      if (!!window.SpeechSDK) {
-        SpeechSDK = window.SpeechSDK;
-        startRecognizeOnceAsyncButton.disabled = false;
-
-        document.getElementById('content').style.display = 'block';
-        document.getElementById('warning').style.display = 'none';
-
-        // in case we have a function for getting an authorization token, call it.
-        if (typeof RequestAuthorizationToken === 'function') {
-          RequestAuthorizationToken();
+      } else {
+        if (
+          subscriptionKey.value === '' ||
+          subscriptionKey.value === 'subscription'
+        ) {
+          alert(
+            'Please enter your Microsoft Cognitive Services Speech subscription key!'
+          );
+          subscriptionKeyDisabled.value = false;
+          return;
         }
+        speechConfig = SDK.SpeechConfig.fromSubscription(
+          subscriptionKey.value,
+          serviceRegion.value
+        );
       }
+
+      speechConfig.speechRecognitionLanguage = 'en-UK';
+      const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new SDK.SpeechRecognizer(speechConfig, audioConfig);
+
+      recognizer.recognizeOnceAsync(
+        function (result) {
+          listening.value = false;
+          phrase.value += result.text;
+          console.log(result);
+          recognizer.close();
+        },
+        function (err) {
+          listening.value = false;
+          phrase.value += err;
+          console.log(err);
+          recognizer.close();
+        }
+      );
+    };
+
+    onMounted(() => {
+      SDK = window.SpeechSDK;
+      getAuthToken();
     });
+
+    return {
+      subscriptionKeyDisabled,
+      phrase,
+      subscriptionKey,
+      serviceRegion,
+      startListening,
+      listening,
+    };
   },
 };
 </script>
