@@ -5,7 +5,7 @@
         <td></td>
         <td>
           <h1 style="font-weight: 500;">
-            Microsoft Cognitive Services Speech SDK JavaScript Quickstart
+            Ponger
           </h1>
         </td>
       </tr>
