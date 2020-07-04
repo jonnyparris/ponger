@@ -1,0 +1,23 @@
+{
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#8afa7b",
+    "activityBar.activeBorder": "#8492fa",
+    "activityBar.background": "#8afa7b",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#8492fa",
+    "activityBarBadge.foreground": "#15202b",
+    "statusBar.background": "#5ef84a",
+    "statusBar.border": "#5ef84a",
+    "statusBar.foreground": "#15202b",
+    "statusBarItem.hoverBackground": "#32f619",
+    "titleBar.activeBackground": "#5ef84a",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.border": "#5ef84a",
+    "titleBar.inactiveBackground": "#5ef84a99",
+    "titleBar.inactiveForeground": "#15202b99"
+  },
+  "peacock.color": "#5ef84a",
+  "vetur.validation.template": false,
+  "editor.renameOnType": true
+}
