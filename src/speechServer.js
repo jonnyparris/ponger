@@ -1,9 +1,53 @@
-// import sdk from 'microsoft-cognitiveservices-speech-sdk';
 let ws;
+let pushStream;
 
-const startSocketServer = () => {
+const REGION = 'westeurope';
+const KEY = process.env.CS_KEY;
+
+const onClientMsg = (msg) => {
+  pushStream.write(msg);
+};
+
+const initRecognitionEngine = () => {
+  const sdk = require('microsoft-cognitiveservices-speech-sdk');
+  const { samplesPerSecond, bitsPerSample, channels } = {
+    samplesPerSecond: 44100,
+    bitsPerSample: 16000,
+    channels: 1,
+  };
+  const streamFormat = sdk.AudioStreamFormat.getWaveFormatPCM(
+    samplesPerSecond,
+    bitsPerSample,
+    channels
+  );
+  pushStream = sdk.AudioInputStream.createPushStream(streamFormat);
+  const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
+  const subscription = sdk.SpeechConfig.fromSubscription(KEY, REGION);
+  const recognizer = new sdk.SpeechRecognizer(subscription, audioConfig);
+  recognizer.startContinuousRecognitionAsync();
+  recognizer.speechEndDetected = () => {
+    console.log('End of speech detected.');
+  };
+  recognizer.canceled = (o, e) => {
+    try {
+      console.log('canceled', e, o);
+    } catch (error) {
+      console.log('canceled error', error);
+    }
+  };
+  recognizer.recognizing = (_, { result }) => {
+    console.log('recognizing', result.text);
+  };
+  recognizer.recognized = (_, { result }) => {
+    console.log('recognized: ', result.text);
+    ws.send(result.text);
+  };
+};
+
+const startSocketServer = (onMsg) => {
   const WebSocket = require('ws');
-  const PORT = proces.env.SERVER_PORT || 8080;
+  const PORT = process.env.SERVER_PORT || 8080;
+
   ws = new WebSocket.Server({ port: PORT });
 
   ws.on('listening', () => {
@@ -11,61 +55,10 @@ const startSocketServer = () => {
   });
 
   ws.on('connection', (ws) => {
-    ws.on('message', (message) => {
-      console.log(`Received message => ${message}`);
-    });
     ws.send('Connection acknowledged - welcome to socky!');
+    ws.on('message', onMsg);
   });
 };
 
-// const REGION = 'westeurope';
-// const KEY = process.env.CS_KEY;
-
-// function SpeechToText() {
-//   const { region, samplesPerSecond, bitsPerSample, channels } = {
-//     region: REGION,
-//     samplesPerSecond: 44100,
-//     bitsPerSample: 16000,
-//     channels: 1,
-//   };
-
-//   var s = sdk.SpeechConfig.fromSubscription(KEY, REGION);
-
-//   let p;
-//   const format = sdk.AudioStreamFormat.getWaveFormatPCM(
-//     samplesPerSecond,
-//     bitsPerSample,
-//     channels
-//   );
-
-//   this.pushStream = sdk.AudioInputStream.createPushStream(format);
-
-//   this.recognizeAsync = function () {
-//     let audioConfig = sdk.AudioConfig.fromStreamInput(this.pushStream);
-//     this.recognizer = new sdk.SpeechRecognizer(s, audioConfig);
-//     this.recognizer.startContinuousRecognitionAsync();
-//     cognizer.canceled = (o, e) => {
-//       try {
-//         console.log('canceled', e, o);
-//       } catch (error) {
-//         console.log('canceled error', error);
-//       }
-//     };
-//     this.recognizer.recognizing = (rec, { result }) => {
-//       console.log('recognizing', result.text);
-//     };
-//     this.recognizer.recognized = (rec, { result }) => {
-//       console.log('recognized: ', result.text);
-//     };
-//   };
-// }
-
-// const speectToText = new SpeechToText();
-// speectToText.recognizeAsync();
-
-// // Converts text to speech using the input from readline.
-// const _speechToText = (text, config, selectedLang) => {
-//   return new Promise(async (resolve, reject) =>
-//     speectToText.pushStream.write(text)
-//   );
-// };
+initRecognitionEngine();
+startSocketServer(onClientMsg);
