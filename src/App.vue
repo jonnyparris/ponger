@@ -1,14 +1,14 @@
 <template>
-  <Demo />
+  <Node />
 </template>
 
 <script>
-import Demo from './components/Demo.vue';
+import Node from './components/Node.vue';
 
 export default {
   name: 'App',
   components: {
-    Demo,
+    Node,
   },
 };
 </script>
