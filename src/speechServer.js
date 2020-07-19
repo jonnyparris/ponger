@@ -51,10 +51,11 @@ const startSocketServer = (onMsg) => {
   ws = new WebSocket.Server({ port: PORT });
 
   ws.on('listening', () => {
-    console.log('Listening for messages on port', PORT);
+    console.info('Listening for messages on port', PORT);
   });
 
   ws.on('connection', (ws) => {
+    console.info('New client connection');
     ws.send('Connection acknowledged - welcome to socky!');
     ws.on('message', onMsg);
   });
