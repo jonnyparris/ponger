@@ -4,11 +4,15 @@
     <textarea
       :value="messages"
       name="messages"
-      cols="30"
+      cols="100"
       :rows="messages.length + 1"
     />
-    <button @click.prevent="startListening">Listen</button>
-    <button @click.prevent="stopListening">Stop</button>
+    <div>
+      <button @click.prevent="startListening">Listen</button>
+      <button :disabled="!listening" @click.prevent="stopListening">
+        Stop
+      </button>
+    </div>
   </div>
 </template>
 
@@ -20,6 +24,7 @@ export default {
   setup() {
     let socky = null;
     const messages = ref([]);
+    const listening = ref(false);
 
     const convertFloat32ToInt16 = (buffer) => {
       let l = buffer.length;
@@ -74,6 +79,7 @@ export default {
     };
 
     const startListening = () => {
+      listening.value = true;
       navigator.mediaDevices.getUserMedia({ audio: true }).then(
         (stream) => {
           AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -86,6 +92,7 @@ export default {
           processor.onaudioprocess = handleMicrophoneBytes;
         },
         (error) => {
+          listening.value = false;
           console.error('Listening error: ', JSON.stringify(error));
         }
       );
@@ -115,6 +122,7 @@ export default {
 
     return {
       messages,
+      listening,
       startListening,
       stopListening,
     };
