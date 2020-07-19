@@ -24,7 +24,13 @@ const initRecognitionEngine = () => {
   const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
   const subscription = sdk.SpeechConfig.fromSubscription(KEY, REGION);
   const recognizer = new sdk.SpeechRecognizer(subscription, audioConfig);
-  recognizer.startContinuousRecognitionAsync();
+  recognizer.speechRecognitionLanguage = 'en-GB';
+  recognizer.sessionStarted = () => {
+    console.log('Speech reco session started');
+  };
+  recognizer.speechStartDetected = () => {
+    console.log('Speech start detected');
+  };
   recognizer.speechEndDetected = () => {
     console.log('End of speech detected.');
   };
@@ -42,6 +48,19 @@ const initRecognitionEngine = () => {
     console.log('recognized: ', result.text);
     ws.send(result.text);
   };
+  try {
+    recognizer.startContinuousRecognitionAsync(
+      2,
+      () => {
+        console.log('Recognizer start callback');
+      },
+      (e) => {
+        console.error('Recognizer error callback', e);
+      }
+    );
+  } catch (e) {
+    console.log('Error starting recognizer', e);
+  }
 };
 
 const startSocketServer = (onMsg) => {
