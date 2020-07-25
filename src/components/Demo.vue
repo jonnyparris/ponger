@@ -77,24 +77,30 @@ export default {
     const subscriptionKeyDisabled = ref(false);
     let SDK;
 
-    const getAuthToken = () => {
+    const getAuthToken = async () => {
       const authorizationEndpoint =
         'https://westeurope.api.cognitive.microsoft.com/sts/v1.0/issuetoken';
-      const a = new XMLHttpRequest();
-      a.open('GET', authorizationEndpoint);
-      a.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-      a.send('');
-      a.onload = function () {
-        const token = JSON.parse(atob(this.responseText.split('.')[1]));
-        serviceRegion.value = token.region;
-        authorizationToken.value = this.responseText;
-        subscriptionKeyDisabled = true;
-        subscriptionKey.value = 'using authorization token (hit F5 to refresh)';
-        console.log('Got an authorization token: ' + token);
-      };
+      return new Promise((resolve, reject) => {
+        const a = new XMLHttpRequest();
+        a.open('POST', authorizationEndpoint);
+        a.setRequestHeader('Content-Type', 'application/json');
+        a.setRequestHeader('Ocp-Apim-Subscription-Key', subscriptionKey.value);
+        a.onload = function () {
+          const token = JSON.parse(atob(this.responseText.split('.')[1]));
+          serviceRegion.value = token.region;
+          authorizationToken.value = this.responseText;
+          subscriptionKeyDisabled.value = true;
+          subscriptionKey.value =
+            'using authorization token (hit F5 to refresh)';
+          console.log('Got an authorization token: ' + JSON.stringify(token));
+          resolve();
+        };
+        a.send('');
+      });
     };
 
-    const startListening = () => {
+    const startListening = async () => {
+      await getAuthToken();
       listening.value = true;
       phrase.value = '';
 
@@ -130,13 +136,13 @@ export default {
         function (result) {
           listening.value = false;
           phrase.value += result.text;
-          console.log(result);
+          console.log('Recognition success', result);
           recognizer.close();
         },
         function (err) {
           listening.value = false;
           phrase.value += err;
-          console.log(err);
+          console.error('Recognition error', err);
           recognizer.close();
         }
       );
@@ -144,7 +150,6 @@ export default {
 
     onMounted(() => {
       SDK = window.SpeechSDK;
-      getAuthToken();
     });
 
     return {
